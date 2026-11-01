@@ -618,8 +618,34 @@
     $('overlay').classList.add('show');
   }
 
+  // ---------- 自动定位 ----------
+  var userInteracted = false;   // 用户一旦手动操作，自动定位不再覆盖
+
+  function autoLocate() {
+    if (!navigator.geolocation) return;
+    setStatus('正在获取你的位置…');
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      if (userInteracted) return;
+      var lnglat = new AMap.LngLat(pos.coords.longitude, pos.coords.latitude);
+      geocoder.getAddress(lnglat, function (gs, gres) {
+        if (userInteracted) return;
+        var addr = (gs === 'complete' && gres.regeocode) ? gres.regeocode.formattedAddress : '';
+        if (addr) $('addrInput').value = addr;
+        startSearchFromLocation(lnglat, addr);
+      });
+    }, function () {
+      if (!userInteracted) setStatus('');  // 定位失败或被拒绝，静默回退到手动输入
+    }, { timeout: 8000, maximumAge: 300000 });
+  }
+
   // ---------- 启动 ----------
   initServices();
+  ['input', 'click'].forEach(function (evt) {
+    $('addrInput').addEventListener(evt, function () { userInteracted = true; });
+  });
+  $('searchBtn').addEventListener('click', function () { userInteracted = true; });
+  $('radiusPicker').addEventListener('click', function () { userInteracted = true; });
+  autoLocate();
 })();
 </script>
 </body>
