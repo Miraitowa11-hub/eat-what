@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>待会儿吃什么</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: linear-gradient(160deg, #fff7ed 0%, #fef1e6 40%, #fdeee8 100%);
+    color: #3d2c1e;
+    min-height: 100vh;
+  }
+  header {
+    text-align: center;
+    padding: 34px 16px 10px;
+  }
+  header h1 {
+    font-size: 34px;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #e8590c, #c2255c);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p { color: #9a7b62; margin-top: 8px; font-size: 14px; }
+
+  .search-bar {
+    max-width: 760px;
+    margin: 22px auto 0;
+    padding: 0 16px;
+    position: relative;
+    display: flex;
+    gap: 10px;
+  }
+  #addrInput {
+    flex: 1;
+    padding: 14px 18px;
+    font-size: 16px;
+    border: 2px solid #f4c9a8;
+    border-radius: 14px;
+    outline: none;
+    background: #fff;
+    transition: border-color .2s;
+  }
+  #addrInput:focus { border-color: #e8590c; }
+  #searchBtn {
+    padding: 0 26px;
+    font-size: 16px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(90deg, #e8590c, #f08c00);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(232, 89, 12, .3);
+    transition: transform .1s;
+  }
+  #searchBtn:active { transform: scale(.96); }
+  #suggest {
+    position: absolute;
+    top: calc(100% - 42px + 46px);
+    left: 16px;
+    right: 100px;
+    background: #fff;
+    border: 1px solid #f0dcc8;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.12);
+    z-index: 20;
+    max-height: 260px;
+    overflow-y: auto;
+    display: none;
+  }
+  #suggest div {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    border-bottom: 1px dashed #f5e6d6;
+  }
+  #suggest div:hover { background: #fff4e8; }
+  #suggest .s-name { color: #3d2c1e; font-weight: 600; }
+  #suggest .s-dist { color: #a08468; font-size: 12px; margin-left: 6px; }
+
+  .radius-picker {
+    max-width: 760px;
+    margin: 12px auto 0;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .rp-label { font-size: 13px; color: #9a7b62; margin-right: 2px; }
+  .rp-opt {
+    padding: 5px 14px;
+    font-size: 13px;
+    border: 1.5px solid #f2e2d0;
+    border-radius: 999px;
+    background: #fffdf9;
+    color: #7a5c42;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .rp-opt:hover { border-color: #e8590c; color: #e8590c; }
+  .rp-opt.active {
+    background: linear-gradient(90deg, #e8590c, #f08c00);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 3px 10px rgba(232, 89, 12, .3);
+  }
+
+  #status {
+    max-width: 1100px;
+    margin: 14px auto 0;
+    padding: 0 16px;
+    text-align: center;
+    color: #b3541e;
+    font-size: 15px;
+    min-height: 22px;
+  }
+
+  .layout {
+    max-width: 900px;
+    margin: 10px auto 30px;
+    padding: 0 16px;
+  }
+
+  #listCard {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 6px 24px rgba(160, 110, 60, .12);
+    overflow: hidden;
+  }
+  #listCard .card-title {
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 15px;
+    color: #7a4a20;
+    border-bottom: 1px solid #f7e8d8;
+    background: #fffaf3;
+  }
+  .tabs { display: flex; gap: 10px; padding: 14px 16px 4px; }
+  .tab {
+    flex: 1;
+    padding: 12px 8px;
+    border: 1.5px solid #f2e2d0;
+    border-radius: 12px;
+    background: #fffdf9;
+    font-size: 15px;
+    font-weight: 700;
+    color: #7a5c42;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: all .15s;
+  }
+  .tab .cat-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .tab .tab-count { font-size: 12px; font-weight: 400; opacity: .85; }
+  .tab.active { color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+  .tab.active .tab-count { color: #fff; }
+  .cards-wrap { padding: 12px 16px 16px; }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+  }
+  .poi-card {
+    border: 1.5px solid #f2e2d0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #fffdf9;
+    cursor: default;
+    transition: box-shadow .15s, border-color .15s, transform .15s;
+  }
+  .poi-card:hover { box-shadow: 0 4px 14px rgba(200,120,40,.15); }
+  .poi-card .p-name { font-weight: 700; font-size: 14.5px; margin-bottom: 4px; }
+  .poi-card .p-addr { font-size: 12px; color: #9a7b62; line-height: 1.4; }
+  .poi-card .p-meta { font-size: 12px; color: #b3541e; margin-top: 5px; display: flex; gap: 10px; align-items: center; }
+  .nav-btn {
+    margin-left: auto;
+    font-size: 12px;
+    color: #fff;
+    background: #1c7ed6;
+    padding: 3px 14px;
+    border-radius: 999px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: #1971c2; }
+  .poi-card.rolling { border-color: #f08c00; background: #fff4e0; }
+  .poi-card.picked {
+    border-color: #e8590c;
+    background: #fff0e0;
+    box-shadow: 0 0 0 3px rgba(232,89,12,.25);
+    transform: translateY(-2px);
+  }
+  .empty-cat { color: #c0a68e; font-size: 13px; padding: 4px 0 10px; }
+
+  #pickBtn {
+    display: block;
+    margin: 6px auto 40px;
+    padding: 16px 46px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #e8590c, #c2255c);
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(200, 60, 60, .35);
+    letter-spacing: 2px;
+    transition: transform .12s;
+  }
+  #pickBtn:disabled { opacity: .45; cursor: not-allowed; }
+  #pickBtn:not(:disabled):hover { transform: scale(1.04); }
+
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(40, 20, 5, .55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    backdrop-filter: blur(3px);
+  }
+  #overlay.show { display: flex; }
+  #pickCard {
+    background: #fff;
+    border-radius: 22px;
+    padding: 34px 38px;
+    max-width: 420px;
+    width: calc(100% - 40px);
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    animation: pop .35s ease;
+  }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  #pickCard .tip { color: #a08468; font-size: 14px; }
+  #pickCard .name {
+    font-size: 26px;
+    font-weight: 800;
+    margin: 12px 0 8px;
+    background: linear-gradient(90deg, #e8590c, #c2255c);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  #pickCard .cat-tag {
+    display: inline-block;
+    font-size: 12px;
+    color: #fff;
+    padding: 3px 12px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  #pickCard .addr { color: #7a5c42; font-size: 14px; line-height: 1.5; }
+  #pickCard .dist { color: #b3541e; font-size: 13px; margin-top: 6px; }
+  #pickCard .btns { margin-top: 22px; display: flex; gap: 12px; justify-content: center; }
+  #pickCard button {
+    padding: 10px 24px;
+    border-radius: 999px;
+    font-size: 15px;
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
+  }
+  #againBtn { background: #fff1e3; color: #b3541e; border: 1.5px solid #f0c9a2; }
+  #closeBtn { background: linear-gradient(90deg, #e8590c, #c2255c); color: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>待会儿吃什么</h1>
+  <p>输入一个地址，随机帮你决定去哪吃（高德真实周边数据 · 范围可选）</p>
+</header>
+
+<div class="search-bar">
+  <input id="addrInput" placeholder="输入地址，例如：上海市黄浦区人民广场" autocomplete="off">
+  <button id="searchBtn">搜索周边</button>
+  <div id="suggest"></div>
+</div>
+
+<div class="radius-picker" id="radiusPicker">
+  <span class="rp-label">搜索范围</span>
+  <button class="rp-opt" data-r="100">100 米</button>
+  <button class="rp-opt" data-r="300">300 米</button>
+  <button class="rp-opt active" data-r="500">500 米</button>
+  <button class="rp-opt" data-r="1000">1 公里</button>
+  <button class="rp-opt" data-r="3000">3 公里</button>
+</div>
+
+<div id="status"></div>
+
+<div class="layout">
+  <div id="listCard">
+    <div class="card-title">搜索结果 <span id="totalInfo" style="font-weight:400;color:#a08468;font-size:12px;"></span></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="cards-wrap">
+      <div id="cards" class="cards"></div>
+      <div id="catEmpty" class="empty-cat" style="display:none;"></div>
+    </div>
+    <div id="listEmpty" class="empty-cat" style="padding:16px;">搜索地址后，这里会列出周边的餐厅、奶茶店和甜品下午茶。</div>
+  </div>
+</div>
+
+<button id="pickBtn" disabled>帮我选一个</button>
+
+<div id="overlay">
+  <div id="pickCard">
+    <div class="tip">就决定是你了！</div>
+    <span class="cat-tag" id="pickTag"></span>
+    <div class="name" id="pickName"></div>
+    <div class="addr" id="pickAddr"></div>
+    <div class="dist" id="pickDist"></div>
+    <div class="btns">
+      <button id="againBtn">再选一个</button>
+      <button id="closeBtn">就它了</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  window._AMapSecurityConfig = {
+    securityJsCode: '27884d87d27beca7ac719c260e156e1f'
+  };
+</script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=1d8570e8413bce5cb865d5bb1c9ced82&plugin=AMap.AutoComplete,AMap.Geocoder,AMap.PlaceSearch"></script>
+<script>
+(function () {
+  var RADIUS = 500;
+  function radiusLabel(r) { return r >= 1000 ? (r / 1000) + ' 公里' : r + ' 米'; }
+  var CATS = {
+    restaurant: { label: '餐厅', color: '#e8590c' },
+    tea:        { label: '奶茶店', color: '#c2255c' },
+    dessert:    { label: '甜品下午茶', color: '#7048e8' }
+  };
+
+  var geocoder, autoComplete, placeSearch;
+  var searchCenter = null;    // 搜索的坐标点
+  var allPois = [];           // 去重后的 POI 列表
+  var activeCat = 'restaurant';
+  var pickedPoi = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var status = $('status');
+
+  function setStatus(msg) { status.textContent = msg || ''; }
+
+  // ---------- 分类 ----------
+  var TEA_RE = /奶茶|茶饮|鲜果茶|柠檬茶|果茶|奶盖|烧仙草|茶颜悦色|喜茶|霸王茶姬|蜜雪冰城|茶百道|沪上阿姨|古茗|书亦|益禾堂|甜啦啦|柠季|阿水大杯茶|悸动|煲珠公|爷爷不泡茶|东方墨兰|茉莉奶白|茶理宜世|吾饮良品|大卡司|快乐番|鹿角巷|黑泷堂|素匠泰茶|KOI|COCO|1点点|一点点|都可|鲜茶道|ooneccup|KOI\s?The|饮品|茶饮|奶茶/i;
+  var DESSERT_RE = /甜品|甜点|蛋糕|烘焙|面包|下午茶|咖啡|冰淇淋|雪糕|泡芙|慕斯|马卡龙|可丽饼|华夫|巧克力|双皮奶|杨枝甘露|糖水|龟苓膏|贝果|可露丽|班戟|舒芙蕾|糖果|dessert|cafe|coffee|bakery|brunch/i;
+
+  function classify(poi) {
+    var name = (poi.name || '');
+    var type = (poi.type || '');
+    var tc = String(poi.typecode || '');
+    var s = name + ' ' + type;
+    if (TEA_RE.test(s)) return 'tea';
+    if (DESSERT_RE.test(s) || tc.indexOf('0505') === 0 || tc.indexOf('0506') === 0 || tc.indexOf('0507') === 0) return 'dessert';
+    return 'restaurant';
+  }
+
+  // ---------- 服务初始化 ----------
+  function initServices() {
+    geocoder = new AMap.Geocoder();
+    autoComplete = new AMap.AutoComplete({ city: '全国' });
+    placeSearch = new AMap.PlaceSearch({
+      type: '050000',       // 餐饮服务大类（含中餐厅/快餐/咖啡厅/甜品店等所有子类）
+      pageSize: 50,
+      pageIndex: 1,
+      extensions: 'all'
+    });
+  }
+
+  // ---------- 地址联想 ----------
+  var suggestBox = $('suggest');
+  var inputTimer = null;
+
+  $('addrInput').addEventListener('input', function () {
+    var kw = this.value.trim();
+    clearTimeout(inputTimer);
+    if (!kw) { suggestBox.style.display = 'none'; return; }
+    inputTimer = setTimeout(function () {
+      autoComplete.search(kw, function (status, result) {
+        suggestBox.innerHTML = '';
+        if (status === 'complete' && result.tips && result.tips.length) {
+          result.tips.forEach(function (tip) {
+            if (!tip.location) return;
+            var d = document.createElement('div');
+            d.innerHTML = '<span class="s-name">' + tip.name + '</span><span class="s-dist">' +
+              (tip.district || '') + (tip.address ? ' ' + tip.address : '') + '</span>';
+            d.addEventListener('click', function () {
+              $('addrInput').value = (tip.district || '') + tip.name;
+              suggestBox.style.display = 'none';
+              setRadius(500);  // 新地址搜索默认回到 500 米
+              startSearchFromLocation(tip.location, tip.name);
+            });
+            suggestBox.appendChild(d);
+          });
+          suggestBox.style.display = 'block';
+        } else {
+          suggestBox.style.display = 'none';
+        }
+      });
+    }, 250);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.search-bar')) suggestBox.style.display = 'none';
+  });
+
+  // ---------- 搜索流程 ----------
+  $('searchBtn').addEventListener('click', function () {
+    var addr = $('addrInput').value.trim();
+    if (!addr) { setStatus('请先输入地址'); return; }
+    setRadius(500);  // 新地址搜索默认回到 500 米
+    setStatus('正在解析地址…');
+    geocoder.getLocation(addr, function (gs, gres) {
+      if (gs === 'complete' && gres.geocodes && gres.geocodes.length) {
+        var loc = gres.geocodes[0].location;
+        startSearchFromLocation(loc, gres.geocodes[0].formatted_address);
+      } else {
+        setStatus('地址解析失败，请换个更具体的地址，或直接从下拉建议中选择');
+      }
+    });
+  });
+
+  $('addrInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') $('searchBtn').click();
+  });
+
+  // ---------- 搜索范围切换 ----------
+  function setRadius(r) {
+    RADIUS = r;
+    document.querySelectorAll('#radiusPicker .rp-opt').forEach(function (b) {
+      b.classList.toggle('active', parseInt(b.dataset.r, 10) === r);
+    });
+  }
+
+  $('radiusPicker').addEventListener('click', function (e) {
+    var btn = e.target.closest('.rp-opt');
+    if (!btn || btn.classList.contains('active')) return;
+    setRadius(parseInt(btn.dataset.r, 10));
+    if (searchCenter) startSearchFromLocation(searchCenter);
+  });
+
+  function startSearchFromLocation(lnglat, label) {
+    searchCenter = lnglat;
+    setStatus('正在搜索周边 ' + radiusLabel(RADIUS) + '内的餐饮店铺…');
+    allPois = [];
+    activeCat = 'restaurant';
+    searchNearByPage(lnglat, 1, null);
+  }
+
+  function searchNearByPage(center, pageIndex, onDone) {
+    placeSearch.setPageIndex(pageIndex);
+    placeSearch.searchNearBy('', center, RADIUS, function (s, res) {
+      if (s !== 'complete' && s !== 'no_data') {
+        setStatus('搜索失败：' + (res && res.message ? res.message : '请重试'));
+        return;
+      }
+      var pl = res.poiList || {};
+      var list = Array.isArray(pl) ? pl : (pl.poiList || pl.pois || []);
+      var count = pl.count || list.length;
+      list.forEach(addPoi);
+      var totalPages = Math.min(Math.ceil(count / 50), 4);
+      if (pageIndex < totalPages) {
+        searchNearByPage(center, pageIndex + 1, onDone);
+      } else if (allPois.length === 0 && pageIndex === 1) {
+        // 空关键词无结果时，用「美食」关键词兜底再试一次
+        placeSearch.searchNearBy('美食', center, RADIUS, function (s2, res2) {
+          if (s2 === 'complete' || s2 === 'no_data') {
+            var pl2 = res2.poiList || {};
+            var l2 = Array.isArray(pl2) ? pl2 : (pl2.poiList || pl2.pois || []);
+            l2.forEach(addPoi);
+            finishSearch(center);
+          } else {
+            setStatus('搜索失败，请重试');
+          }
+        });
+      } else {
+        finishSearch(center);
+      }
+    });
+  }
+
+  function addPoi(poi) {
+    if (!poi || !poi.id) return;
+    if (allPois.some(function (p) { return p.id === poi.id; })) return;
+    poi._cat = classify(poi);
+    allPois.push(poi);
+  }
+
+  function finishSearch(center) {
+    renderList();
+    if (allPois.length === 0) {
+      setStatus('这个地址 ' + radiusLabel(RADIUS) + '内没有找到餐饮店铺，扩大范围或换个热闹点的位置试试');
+      $('pickBtn').disabled = true;
+    } else {
+      setStatus('找到 ' + allPois.length + ' 家餐饮店铺（' + radiusLabel(RADIUS) + '内 · 数据来源：高德地图）');
+      $('pickBtn').disabled = false;
+    }
+  }
+
+  // ---------- 渲染：分类标签 + 当前分类卡片 ----------
+  function renderList() {
+    var groups = { restaurant: [], tea: [], dessert: [] };
+    allPois.forEach(function (p) { groups[p._cat].push(p); });
+
+    // 一行三个并排的分类标签
+    var tabsEl = $('tabs');
+    tabsEl.innerHTML = '';
+    Object.keys(CATS).forEach(function (key) {
+      var cat = CATS[key];
+      var b = document.createElement('button');
+      b.className = 'tab' + (key === activeCat ? ' active' : '');
+      if (key === activeCat) {
+        b.style.background = cat.color;
+        b.style.borderColor = cat.color;
+      }
+      b.innerHTML = '<span class="cat-dot" style="background:' + (key === activeCat ? '#fff' : cat.color) + '"></span>' +
+        cat.label + '<span class="tab-count">' + groups[key].length + ' 家</span>';
+      b.addEventListener('click', function () {
+        activeCat = key;
+        renderList();
+      });
+      tabsEl.appendChild(b);
+    });
+
+    // 当前分类的店铺卡片
+    var wrap = $('cards');
+    wrap.innerHTML = '';
+    var items = groups[activeCat];
+    items.forEach(function (p) {
+      wrap.insertAdjacentHTML('beforeend', cardHtml(p));
+    });
+    var catEmpty = $('catEmpty');
+    catEmpty.style.display = (allPois.length && !items.length) ? 'block' : 'none';
+    catEmpty.textContent = radiusLabel(RADIUS) + '内暂无' + CATS[activeCat].label;
+    $('listEmpty').style.display = allPois.length ? 'none' : 'block';
+    $('totalInfo').textContent = allPois.length ? '共 ' + allPois.length + ' 家' : '';
+  }
+
+  function cardHtml(p) {
+    return '<div class="poi-card" data-id="' + p.id + '">' +
+      '<div class="p-name">' + escapeHtml(p.name) + '</div>' +
+      '<div class="p-addr">' + escapeHtml(p.address || '暂无地址') + '</div>' +
+      '<div class="p-meta"><span>距离 ' + Math.round(p.distance || 0) + ' 米</span>' +
+      (p.tel ? '<span>' + escapeHtml(String(p.tel).split(';')[0]) + '</span>' : '') +
+      '<a class="nav-btn" href="' + navUrl(p) + '" target="_blank" rel="noopener">导航</a>' +
+      '</div></div>';
+  }
+
+  // 高德路线规划：从搜索地址步行到店铺
+  function navUrl(poi) {
+    if (!poi.location) return 'https://uri.amap.com/search?keyword=' + encodeURIComponent(poi.name);
+    var to = poi.location.getLng() + ',' + poi.location.getLat() + ',' + encodeURIComponent(poi.name);
+    var from = searchCenter ? searchCenter.getLng() + ',' + searchCenter.getLat() + ',出发位置' : '';
+    return 'https://uri.amap.com/navigation?from=' + from + '&to=' + to + '&mode=walk&policy=0&callnative=0&src=eat-what';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // ---------- 随机选择 ----------
+  $('pickBtn').addEventListener('click', pickRandom);
+  $('againBtn').addEventListener('click', function () { $('overlay').classList.remove('show'); pickRandom(); });
+  $('closeBtn').addEventListener('click', function () { $('overlay').classList.remove('show'); });
+
+  function pickRandom() {
+    // 只在当前分类内随机选择
+    var items = allPois.filter(function (p) { return p._cat === activeCat; });
+    if (!items.length) { setStatus('当前分类下没有可选店铺'); return; }
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.poi-card'));
+    cards.forEach(function (c) { c.classList.remove('picked'); });
+
+    var ticks = 0;
+    var maxTicks = 16;
+    var timer = setInterval(function () {
+      cards.forEach(function (c) { c.classList.remove('rolling'); });
+      var c = cards[Math.floor(Math.random() * cards.length)];
+      if (c) c.classList.add('rolling');
+      ticks++;
+      if (ticks >= maxTicks) {
+        clearInterval(timer);
+        cards.forEach(function (c2) { c2.classList.remove('rolling'); });
+        var final = items[Math.floor(Math.random() * items.length)];
+        showPick(final);
+      }
+    }, 90);
+  }
+
+  function showPick(poi) {
+    pickedPoi = poi;
+    activeCat = poi._cat;
+    renderList();
+    var card = document.querySelector('.poi-card[data-id="' + poi.id + '"]');
+    if (card) {
+      card.classList.add('picked');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    var cat = CATS[poi._cat];
+    var tag = $('pickTag');
+    tag.textContent = cat.label;
+    tag.style.background = cat.color;
+    $('pickName').textContent = poi.name;
+    $('pickAddr').textContent = poi.address || '';
+    $('pickDist').textContent = '距离约 ' + Math.round(poi.distance || 0) + ' 米';
+    $('overlay').classList.add('show');
+  }
+
+  // ---------- 启动 ----------
+  initServices();
+})();
+</script>
+</body>
+</html>
